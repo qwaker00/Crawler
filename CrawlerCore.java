@@ -56,14 +56,15 @@ public class CrawlerCore implements WServerHandler
                 maxStat = newValue;
             }
         }
-        sb.append("<div style=\"width:100%;border:0px solid black;padding:10px;display:table;\">");
-        sb.append(String.format("<div style=\"text-align:right;float:left;diplay:block;height:%dpx;padding-right:5px;border-right:1px solid black;\">", height));
+        sb.append("<table cellspacing=\"0\" cellpadding=\"0\" style=\"padding:10px;\"><tr><td>");
+
+        sb.append(String.format("<div style=\"text-align:right;height:%dpx;padding-right:5px;border-right:1px solid black;\">", height));
         sb.append(String.format("<div style=\"position:relative;left:0;top:0px;\">%d</div>", maxStat));
         sb.append(String.format("<div style=\"position:relative;left:0;top:%dpx;\">%d</div>", (height - 100) / 2, maxStat / 2));
         sb.append(String.format("<div style=\"position:relative;left:0;top:%dpx;\">0</div>", height - 100));
-        sb.append("</div>");
+        sb.append("</div></td><td>");
 
-        sb.append("<table cellspacing=\"0px\" style=\"margin-bottom:30px;\"><tr>");
+        sb.append("<table align=\"left\" cellspacing=\"0px\" style=\"margin-bottom:30px;\"><tr>");
         for (int v : stat) {
             sb.append("<td style=\"vertical-align:bottom;border-bottom:1px solid black;\">");
             sb.append(String.format("<div style=\"background-color:blue;display:block;height:%dpx;width:%dpx\"></td>", v * (height - 50) / maxStat, tileSize));
@@ -74,9 +75,9 @@ public class CrawlerCore implements WServerHandler
             sb.append((i + 1) * window);
             sb.append("</div></td>");
         }
-        sb.append("</tr></table><div style=\"text-align:center\"><b>");
+        sb.append("</tr></table></td></tr><tr><td colspan=\"2\"><div style=\"text-align:center\"><b>");
         sb.append(xLegend);
-        sb.append("</b></div></div>");
+        sb.append("</b></div></td></tr></table>");
 
         return sb.toString();
     }
