@@ -28,7 +28,7 @@ public class SimpleWikiCrawler extends WebCrawler
     {
         try {
             String url = page.getWebURL().getURL();
-            logger.debug(String.format("URL: %s [%d]", url, page.getWebURL().getDepth()));
+            logger.info(String.format("URL: %s [%d]", url, page.getWebURL().getDepth()));
 
             GZIPOutputStream out = null;
             String arcName = this.storagePath + "/arc/" + page.getWebURL().getPath().replace(":", "%3a").replace("*", "%22") + ".gz";

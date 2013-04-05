@@ -82,13 +82,13 @@ public class CrawlerCore implements WServerHandler
         return sb.toString();
     }
 
-    private static Map<Integer, Double> calculatePageRank(HashMap<Integer, PageLinkData> pages, int iterCount) {
+    private static Map<Integer, Double> calculatePageRank(HashMap<Integer, PageLinkData> pages) {
         double delta = 0.75D;
         HashMap<Integer, Double> pr = new HashMap<>();
         for (Integer i : pages.keySet()) pr.put(i, 1.);
-        double sumBad;
+        double sumBad, diff = 1e10;
         HashMap<Integer, Double> newPR;
-        for (int iters = 0; iters < iterCount; iters++) {
+        while (diff > 1e-6) {
             newPR = new HashMap<>();
 
             sumBad = 0.0D;
@@ -104,8 +104,10 @@ public class CrawlerCore implements WServerHandler
                     }
                 }
             sumBad /= pages.size();
+            diff = 0;
             for (Integer i : pages.keySet()) {
                 double r = (newPR.get(i) + sumBad) * delta + 1. - delta;
+                diff += (pr.get(i) - r) * (pr.get(i) - r);
                 pr.put(i, r);
             }
         }
@@ -125,23 +127,32 @@ public class CrawlerCore implements WServerHandler
         }
         switch (path) {
             case "start" :
-                logger.debug("Request: start");
+                logger.info("Request: start");
                 startCrawler();
                 break;
             case "exit" :
-                logger.debug("Request: exit");
+                logger.info("Request: exit");
                 exit();
                 break;
             case "add" :
                 String url = params.get("url");
                 if (url != null) {
-                    logger.debug("Request: add seed " + url);
+                    logger.info("Request: add seed " + url);
                     addUrl(url);
                 }
                 break;
         }
 
-        if (this.meta == null) return "<html><body><head><title>Qrawler control panel</title></head><center><h1><a style=\"color:black\" href=\"/\">Qrawler Control Panel</a></h1><br>Wait a second...</center></body></html>";
+        if (this.meta == null) {
+            String message;
+            if (state == State.S_NODATA) {
+                message = "Wait a second... Starting...";
+            } else
+            if (state == State.S_QUIT) {
+                message = "Crawler closed!";
+            } else message = "Wait a second...";
+            return "<html><body><head><title>Qrawler control panel</title></head><center><h1><a style=\"color:black\" href=\"/\">Qrawler Control Panel</a></h1><br>" + message + "</center></body></html>";
+        }
         MetaStats stats = this.meta.getStats();
 
         StringBuilder sb = new StringBuilder();
@@ -233,16 +244,9 @@ public class CrawlerCore implements WServerHandler
                 if (cols < 3) cols = 3;
                 if (cols > 100) cols = 100;
             }
-            int iterCount = 50;
-            if (params.containsKey("iters")) {
-                try {
-                    iterCount = Integer.parseInt(params.get("iters")); } catch (NumberFormatException ignored) {
-                }
-                if (iterCount < 1) iterCount = 1;
-            }
 
             List<Integer> values = new ArrayList<>();
-            Map<Integer, Double> pageRank = calculatePageRank(this.meta.getClosedLinks(), iterCount);
+            Map<Integer, Double> pageRank = calculatePageRank(this.meta.getClosedLinks());
             for (Double entry : pageRank.values()) {
                 values.add((int)Math.round(entry));
             }
@@ -261,15 +265,8 @@ public class CrawlerCore implements WServerHandler
                 if (count < 1) count = 1;
                 if (count > 1000) count = 1000;
             }
-            int iterCount = 50;
-            if (params.containsKey("iters")) {
-                try {
-                    iterCount = Integer.parseInt(params.get("iters")); } catch (NumberFormatException ignored) {
-                }
-                if (iterCount < 1) iterCount = 1;
-            }
 
-            Map<Integer, Double> pageRank = calculatePageRank(this.meta.getClosedLinks(), iterCount);
+            Map<Integer, Double> pageRank = calculatePageRank(this.meta.getClosedLinks());
             ArrayList<Map.Entry<Integer, Double>> ranks = new ArrayList<>(pageRank.entrySet());
             Collections.sort(ranks, new Comparator<Map.Entry<Integer, Double>>()
             {
@@ -363,7 +360,8 @@ public class CrawlerCore implements WServerHandler
         }
         if (this.controller != null) {
             this.controller.shutdown();
-            this.controller.waitUntilFinish();
+            if (!this.controller.isFinished() && state == State.S_RUNNING)
+                this.controller.waitUntilFinish();
         }
         if (this.meta != null) {
             this.meta.Finish();
